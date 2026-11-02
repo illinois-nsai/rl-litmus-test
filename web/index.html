@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f9fb">
+  <meta name="description" content="Can reinforcement learning rediscover a familiar streaming rule? Train an ABR policy and inspect its return landscape, optimization path, and bitrate choices.">
+  <title>RL Litmus Test</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css?v=20261018-abstract">
+  <script type="module" src="./ui.js?v=20261018-paperterms"></script>
+  <script type="module" src="./app.js?v=20261018-paperterms"></script>
+</head>
+<body>
+  <a class="skip" href="#experiment">Skip to the experiment</a>
+  <header class="site-header">
+    <a class="brand" href="./?v=20261018-abstract2"><img src="./favicon.svg" alt="" width="30" height="30">RL Litmus Test</a>
+    <nav class="site-nav" aria-label="Main navigation"><a href="./?v=20261018-abstract2" aria-current="page">Demo</a><a href="./paper.html?v=20261018-abstract2">Paper</a></nav>
+  </header>
+  <main>
+    <section class="intro" aria-labelledby="demo-title">
+      <h1 id="demo-title">Can RL rediscover a simple streaming rule?</h1>
+      <p>Adaptive bitrate (ABR) streaming balances video quality against stalls. In this controlled simulator, reinforcement learning (RL) learns to choose between two bitrates.</p>
+      <p class="demo-question"><strong>The test:</strong> Does the policy learn to favor a higher bitrate as the playback buffer fills?</p>
+    </section>
+    <p class="start-guide">Adjust the stall penalty and learning rate, then press <strong>Train</strong>. Click the heatmap to change the starting policy.</p>
+    <section class="experiment" id="experiment" aria-label="Interactive ABR experiment">
+      <div class="toolbar">
+        <div class="setting-control">
+          <div class="setting-label"><label for="penalty">Stall penalty</label><button type="button" class="info-button" data-help="tip-penalty" aria-label="About stall penalty" aria-controls="tip-penalty" aria-expanded="false">i</button><output id="penalty-value" for="penalty">4.3</output></div>
+          <input id="penalty" type="range" min="0" max="10" step="0.1" value="4.3" aria-describedby="tip-penalty">
+          <div class="range-limits" aria-hidden="true"><span>0</span><span>10</span></div>
+          <div class="info-popover" id="tip-penalty" role="tooltip" hidden><p>The reward cost of playback stalls. Higher values favor avoiding stalls over picture quality. Changing it resets training.</p></div>
+        </div>
+        <div class="setting-control">
+          <div class="setting-label"><label for="learning-rate">Learning rate</label><button type="button" class="info-button" data-help="tip-rate" aria-label="About learning rate" aria-controls="tip-rate" aria-expanded="false">i</button><output id="learning-rate-value" for="learning-rate">0.05</output></div>
+          <input id="learning-rate" type="range" min="0.001" max="0.2" step="0.001" value="0.05" aria-describedby="tip-rate">
+          <div class="range-limits" aria-hidden="true"><span>0.001</span><span>0.2</span></div>
+          <div class="info-popover" id="tip-rate" role="tooltip" hidden><p>The size of each policy update. Larger values can learn faster or overshoot. Changing it resets training.</p></div>
+        </div>
+        <div class="actions"><span class="run-status" id="run-status" role="status">Preparing…</span><button id="reset-button" class="reset-button" disabled>Reset</button><button id="train-button" class="train-button" disabled>Getting ready…</button></div>
+      </div>
+      <p class="error" id="error-message" role="alert" hidden></p>
+      <div class="plots">
+        <section class="plot-panel" aria-labelledby="landscape-title">
+          <div class="plot-heading"><h2 id="landscape-title">Return landscape</h2><button type="button" class="info-button" data-help="tip-landscape" aria-label="About the return landscape" aria-controls="tip-landscape" aria-expanded="false">i</button></div>
+          <div class="info-popover" id="tip-landscape" role="tooltip" hidden><p>Each point is a policy with weight <em>w</em> and bias <em>b</em>. Brighter means higher expected return. The orange line is the optimization path; the dot marks the selected step.</p></div>
+          <div class="map-wrap"><canvas id="landscape-chart" tabindex="0" role="img" aria-label="Expected return over policy weight and bias. Click to set the starting policy; arrow keys also move the starting point."></canvas><div class="map-loading" id="map-loading">Computing the landscape…</div></div>
+          <div class="plot-footer"><span>Expected return <strong id="current-return">—</strong></span></div>
+        </section>
+        <section class="plot-panel" aria-labelledby="policy-title">
+          <div class="plot-heading"><h2 id="policy-title">Bitrate policy</h2><button type="button" class="info-button" data-help="tip-policy" aria-label="About the bitrate policy" aria-controls="tip-policy" aria-expanded="false">i</button></div>
+          <div class="info-popover" id="tip-policy" role="tooltip" hidden><p>The probability of choosing each bitrate at the selected step. A full buffer holds 60 seconds of video.</p></div>
+          <div class="policy-visual"><div class="legend" aria-label="Bitrate legend"><span><i class="high-line" aria-hidden="true"></i>4.3 Mbps · high bitrate</span><span><i class="low-line" aria-hidden="true"></i>2.85 Mbps · low bitrate</span></div><canvas id="policy-chart" role="img" aria-label="Probability of selecting either bitrate as the video buffer fills"></canvas></div>
+        </section>
+      </div>
+      <div class="playback">
+        <div class="playback-labels"><div class="label-with-info"><label for="timeline">Training step</label><button type="button" class="info-button" data-help="tip-timeline" aria-label="About the training timeline" aria-controls="tip-timeline" aria-expanded="false">i</button></div><output id="step-label" for="timeline">Step 0 / 10,000</output></div>
+        <div class="info-popover" id="tip-timeline" role="tooltip" hidden><p>Drag to pause and inspect earlier steps. Each run ends at 10,000 steps; Train again starts fresh.</p></div>
+        <input id="timeline" type="range" min="0" max="0" value="0" step="1" disabled aria-describedby="tip-timeline">
+        <div class="playback-notes"><span id="parameters">w = 0.00 · b = 0.00</span></div>
+      </div>
+      <div class="policy-note"><p><strong id="policy-label">Initial policy:</strong> <span id="policy-summary">Preparing the experiment.</span></p></div>
+    </section>
+
+    <section class="explanation" aria-labelledby="experiment-title">
+      <div class="explanation-intro"><h2 id="experiment-title">The controlled ABR experiment</h2><p>Two failure modes: <strong>unstable optimization paths</strong> and <strong>distorted return landscapes</strong>.</p></div>
+      <div class="comparison">
+        <div><h3>Change the optimization path</h3><p>Change the learning rate or starting point to compare optimization paths on the same landscape.</p></div>
+        <div><h3>Change the return landscape</h3><p>Change the stall penalty to see how the return landscape shifts.</p></div>
+      </div>
+      <details class="about" id="method-details">
+        <summary>Setup and reward</summary>
+        <div class="details-body">
+          <p>Each episode has <strong>8 four-second chunks</strong>, two bitrates (<strong>2.85 and 4.3 Mbps</strong>), and a 60-second buffer. Playback stalls when buffered video runs out.</p>
+          <p><strong>Return</strong> is the expected total reward per episode, averaged across <strong>7 constant-bandwidth network traces</strong>: 3, 3.5, 4, 4.5, 5, 5.5, and 6 Mbps.</p>
+          <p class="reward-formula" id="reward-formula"><span>Reward per chunk =</span> <span>bitrate / 4.3</span> <span>− stall penalty × stall seconds / 4</span></p>
+        </div>
+      </details>
+      <details class="about" id="rl-details">
+        <summary>How RL learns</summary>
+        <div class="details-body">
+          <p>With parameters <math><mi>θ</mi><mo>=</mo><mo stretchy="false">(</mo><mi>w</mi><mo>,</mo><mi>b</mi><mo stretchy="false">)</mo></math>, buffer state <math><mi>s</mi><mo>=</mo><mi>B</mi><mo>/</mo><mn>60</mn></math> (<math><mi>B</mi></math> in seconds), and sigmoid <math><mi>σ</mi></math>:</p>
+          <div class="math-equation">
+            <math display="block" aria-label="The probability of high bitrate given buffer state s equals sigmoid of w s plus b.">
+              <msub><mi>π</mi><mi>θ</mi></msub><mo stretchy="false">(</mo><mtext>high</mtext><mo>∣</mo><mi>s</mi><mo stretchy="false">)</mo>
+              <mo>=</mo><mi>σ</mi><mo stretchy="false">(</mo><mi>w</mi><mi>s</mi><mo>+</mo><mi>b</mi><mo stretchy="false">)</mo>
+            </math>
+          </div>
+          <p>REINFORCE uses <math><mi>N</mi><mo>=</mo><mn>16</mn></math> episodes of <math><mi>T</mi><mo>=</mo><mn>8</mn></math> chunks to estimate the policy gradient:</p>
+          <div class="math-equation" id="policy-gradient-equation">
+            <math class="math-wide" display="block" aria-label="g hat of theta equals one over N T times the sum over episodes i from one to N and steps t from zero to T minus one of G t i times the theta gradient of log pi theta of action a t i given state s t i.">
+              <mover accent="true"><mi>g</mi><mo>^</mo></mover><mo stretchy="false">(</mo><mi>θ</mi><mo stretchy="false">)</mo><mo>=</mo>
+              <mfrac><mn>1</mn><mrow><mi>N</mi><mi>T</mi></mrow></mfrac>
+              <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover>
+              <munderover><mo>∑</mo><mrow><mi>t</mi><mo>=</mo><mn>0</mn></mrow><mrow><mi>T</mi><mo>−</mo><mn>1</mn></mrow></munderover>
+              <msubsup><mi>G</mi><mi>t</mi><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msubsup>
+              <msub><mo>∇</mo><mi>θ</mi></msub><mspace width="0.17em"/><mi>log</mi><mspace width="0.17em"/>
+              <msub><mi>π</mi><mi>θ</mi></msub><mo stretchy="false">(</mo>
+              <msubsup><mi>a</mi><mi>t</mi><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msubsup><mo>∣</mo>
+              <msubsup><mi>s</mi><mi>t</mi><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msubsup><mo stretchy="false">)</mo>
+            </math>
+            <math class="math-narrow" display="block" aria-label="g hat of theta equals one over N T times the sum over episodes i from one to N and steps t from zero to T minus one of G t i times the theta gradient of log pi theta of action a t i given state s t i.">
+              <mtable columnalign="left" columnspacing="0" rowspacing="0.35em">
+                <mtr><mtd><mstyle displaystyle="true"><mover accent="true"><mi>g</mi><mo>^</mo></mover><mo stretchy="false">(</mo><mi>θ</mi><mo stretchy="false">)</mo><mo>=</mo>
+              <mfrac><mn>1</mn><mrow><mi>N</mi><mi>T</mi></mrow></mfrac>
+              <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover>
+              <munderover><mo>∑</mo><mrow><mi>t</mi><mo>=</mo><mn>0</mn></mrow><mrow><mi>T</mi><mo>−</mo><mn>1</mn></mrow></munderover>
+              <msubsup><mi>G</mi><mi>t</mi><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msubsup></mstyle></mtd></mtr>
+                <mtr><mtd><mstyle displaystyle="true"><mspace width="1em"/><mo>×</mo><mspace width="0.17em"/><msub><mo>∇</mo><mi>θ</mi></msub><mspace width="0.17em"/><mi>log</mi><mspace width="0.17em"/>
+              <msub><mi>π</mi><mi>θ</mi></msub><mo stretchy="false">(</mo>
+              <msubsup><mi>a</mi><mi>t</mi><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msubsup><mo>∣</mo>
+              <msubsup><mi>s</mi><mi>t</mi><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msubsup><mo stretchy="false">)</mo></mstyle></mtd></mtr>
+              </mtable>
+            </math>
+          </div>
+          <div class="math-equation" id="return-to-go-equation">
+            <math display="block" aria-label="G t i equals the sum of chunk rewards r k i from k equals t through T minus one.">
+              <msubsup><mi>G</mi><mi>t</mi><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msubsup><mo>=</mo>
+              <munderover><mo>∑</mo><mrow><mi>k</mi><mo>=</mo><mi>t</mi></mrow><mrow><mi>T</mi><mo>−</mo><mn>1</mn></mrow></munderover>
+              <msubsup><mi>r</mi><mi>k</mi><mrow><mo stretchy="false">(</mo><mi>i</mi><mo stretchy="false">)</mo></mrow></msubsup>
+            </math>
+          </div>
+          <p><math><msub><mi>a</mi><mi>t</mi></msub></math> is the bitrate choice; <math><msub><mi>r</mi><mi>t</mi></msub></math> is the chunk reward. Updates use Adam with a small entropy bonus.</p>
+        </div>
+      </details>
+      <details class="about" id="diagnosis-details">
+        <summary>Failure modes</summary>
+        <div class="details-body">
+          <p><strong>F1: Unstable optimization paths.</strong> A high-return ridge exists, but optimization misses it.</p>
+          <p><strong>F2: Distorted return landscapes.</strong> Reward or trace changes shift the high-return region toward undesirable policies.</p>
+        </div>
+      </details>
+    </section>
+  </main>
+  <footer><a href="./paper.html?v=20261018-abstract2">About the paper</a><a href="https://github.com/illinois-nsai/Demystify_ML" target="_blank" rel="noreferrer">Research code ↗</a></footer>
+  <noscript><p class="error">Please enable JavaScript to use the demo.</p></noscript>
+</body>
+</html>
